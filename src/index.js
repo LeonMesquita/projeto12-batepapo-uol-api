@@ -21,11 +21,13 @@ app.use(express.json());
 app.use(cors());
 
 
-const participants = [];
+//const participants = [];
 
 app.post("/participants", async (req, res) => {
     const user = {...req.body, lastStatus: Date.now()};
+    
     if(!user.name || user.name==="") return res.status(422).send("O nome de usuário deve ser informado.");
+    const participants = await db.collection("participants").find().toArray();
     if(participants.find((participant) => participant.name == user.name)) return res.status(409).send("Este nome de usuário já existe.");
     try{
         await db.collection("participants").insertOne(user);
@@ -67,6 +69,7 @@ app.get("/messages", async (req, res) => {
     const user = req.headers.user;
     try{
         const messagesList = await db.collection("messages").find().toArray();
+        if(!limit) res.send(messagesList);
         for(let count = messagesList.length-1; count >= 0; count--){
             const message = messagesList[count];
             if(message.type === "message" || message.from === user || message.to === user){
@@ -76,6 +79,7 @@ app.get("/messages", async (req, res) => {
             if(contMessages === limit)
                 break;
         }
+        res.send(newMessagesList);
 
 
     } catch(error){
