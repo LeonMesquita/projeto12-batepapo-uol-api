@@ -39,8 +39,7 @@ app.post("/participants", async (req, res) => {
     try{
         await db.collection("participants").insertOne(user);
         await db.collection("messages").insertOne(messageBody);
-        updateParticipants();
-        setInterval(updateParticipants, 15000);
+      //  setInterval(updateParticipants, 15000);
         res.status(201).send("OK"); 
     }
     catch (error){
@@ -53,22 +52,24 @@ app.post("/participants", async (req, res) => {
 async function updateParticipants() {
     
     try{
-        const participantsList = await db.collection("participants").find().toArray();
+        const participantsList = await db.collection("participants").findMany().toArray();
+     //   console.log(participantsList);
         for (let count = 0; count < participantsList.length; count++){
-            const participant = participantsList[count];
+            participant = participantsList[count];
             const currentTime = Date.now();
             const messageBody ={
                 from: participant.name,
                 to: 'Todos',
-                text: 'sai da sala...',
-                type: 'message',
+                text: 'sai na sala...',
+                type: 'status',
                 time: dayjs().format("hh:mm:ss")
             };
+            console.log(participant.lastStatus);
+            console.log(participant);
             if(currentTime - participant.lastStatus > 10000){
                 await db.collection("participants").deleteOne({name: participant.name});
                 await db.collection("messages").insertOne(messageBody);
                 console.log(`participante ${participant.name} removido`)
-                
             }
         }
     } catch(error){
@@ -146,7 +147,7 @@ app.post("/status", async (req, res) => {
                 }
             }
         );
-        console.log("status atualizado");
+       // console.log("status atualizado");
         res.sendStatus(200);
     } catch(error){
         res.send(400);
