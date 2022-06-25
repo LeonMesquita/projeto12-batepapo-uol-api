@@ -3,7 +3,7 @@ dayjs().format()
 
 import express from 'express';
 import cors from 'cors';
-import {MongoClient} from 'mongodb';
+import {MongoClient, ObjectId} from 'mongodb';
 
 
 console.log(dayjs().format("hh:mm:ss"));
@@ -21,16 +21,24 @@ app.use(express.json());
 app.use(cors());
 
 
-//const participants = [];
 
 app.post("/participants", async (req, res) => {
     const user = {...req.body, lastStatus: Date.now()};
+    const messageBody ={
+        from: user.name,
+        to: 'Todos',
+        text: 'entra na sala...',
+        type: 'status',
+        time: dayjs().format("hh:mm:ss")
+    };
     
     if(!user.name || user.name==="") return res.status(422).send("O nome de usuário deve ser informado.");
     const participants = await db.collection("participants").find().toArray();
     if(participants.find((participant) => participant.name == user.name)) return res.status(409).send("Este nome de usuário já existe.");
     try{
+        console.log(messageBody);
         await db.collection("participants").insertOne(user);
+        await db.collection("messages").insertOne(messageBody);
         res.status(201).send("OK"); 
     }
     catch (error){
@@ -69,11 +77,12 @@ app.get("/messages", async (req, res) => {
     const user = req.headers.user;
     try{
         const messagesList = await db.collection("messages").find().toArray();
+        //const messagesList = await db.collection("messages").find({to: user}).toArray();
         if(!limit) res.send(messagesList);
         for(let count = messagesList.length-1; count >= 0; count--){
             const message = messagesList[count];
             if(message.type === "message" || message.from === user || message.to === user){
-                newMessagesList.push(message);
+                newMessagesList.unshift(message);
                 contMessages++;
             }
             if(contMessages === limit)
@@ -86,6 +95,29 @@ app.get("/messages", async (req, res) => {
 
     }
 
+});
+
+app.post("/status", async (req, res) => {
+    const userName = req.headers.user;
+    const participant = await db.collection("participants").findOne({name: userName});
+    if(!participant) return res.sendStatus(404);
+    const participantID = participant._id;    
+    try{
+
+        await db.collection('participants').updateOne(
+            {
+                _id: ObjectId(participantID)
+            },
+            {
+                $set: {
+                    lastStatus: Date.now()
+                }
+            }
+        );
+        res.sendStatus(200);
+    } catch(error){
+        res.send(400);
+    }
 });
 
 app.listen(5000, ()=> console.log("servidor rodando"));
