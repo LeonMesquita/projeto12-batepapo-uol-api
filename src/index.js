@@ -141,7 +141,7 @@ app.get("/messages", async (req, res) => {
         if(!limit) res.send(messagesList);
         for(let count = messagesList.length-1; count >= 0; count--){
             const message = messagesList[count];
-            if(message.type === "message" || message.from === user || message.to === user){
+            if(message.type === "message" || message.type === "status" || message.from === user || message.to === user){
                 newMessagesList.unshift(message);
                 contMessages++;
             }
@@ -179,6 +179,25 @@ app.post("/status", async (req, res) => {
         res.sendStatus(200);
     } catch(error){
         res.send(400);
+    }
+});
+
+app.delete("/messages/:message_id", async (req, res) => {
+    const messageID = req.params.message_id;
+    try{
+        const message = await db.collection('messages').findOne({_id: new ObjectId(messageID)});
+        if(!message){
+            res.sendStatus(404);
+            return
+        }
+        if(message.from !== req.headers.user){
+            res.sendStatus(401);
+            return
+        }
+        await db.collection('messages').deleteOne({_id: message._id});
+        res.status(200).send("OK");
+    }catch(error){
+        res.status(400).send("error");
     }
 });
 
