@@ -201,4 +201,37 @@ app.delete("/messages/:message_id", async (req, res) => {
     }
 });
 
+
+app.put("/messages/:message_id", async (req, res) => {
+    const messageID = new ObjectId(req.params.message_id);
+    const from = req.headers.user;
+    const messageBody = {...req.body, from, time: dayjs().format("hh:mm:ss")};
+
+    const validateMessage = messageSchema.validate(messageBody);
+    if(validateMessage.error){
+        res.sendStatus(422);
+        return;
+    }
+    try{
+        const message = await db.collection('messages').findOne({_id: messageID});
+        if(!message){
+            res.sendStatus(404);
+            return
+        }
+        if(message.from !== from){
+            res.sendStatus(401);
+            return
+        }
+        await db.collection('messages').updateOne(
+            {_id: message._id},
+            {
+                $set: { messageBody }
+            }
+            );
+        res.status(200).send("OK");
+    }catch(error){
+        res.status(400).send("error");
+    }
+});
+
 app.listen(5000, ()=> console.log("servidor rodando"));
