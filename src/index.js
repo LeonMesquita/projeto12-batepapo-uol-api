@@ -26,6 +26,21 @@ const participantSchema = joi.object({
     name: joi.string().required()
 });
 
+/*
+    email: Joi.string()
+        .email({ minDomainSegments: 2, tlds: { allow: ['com', 'net'] } })
+*/
+
+
+const messageSchema = joi.object(
+    {
+        to: joi.string().required(),
+        text: joi.string().required(),
+        type: joi.any().valid('message', 'private_message'),
+        from: joi.string().required(),
+        time: joi.string().required()
+    }
+)
 
 
 app.post("/participants", async (req, res) => {
@@ -47,7 +62,6 @@ app.post("/participants", async (req, res) => {
     
     const participants = await db.collection("participants").find().toArray();
     if(participants.find((participant) => participant.name == user.name)) return res.status(409).send("Este nome de usuário já existe.");
-   //updateParticipants();
     try{
         await db.collection("participants").insertOne(user);
         await db.collection("messages").insertOne(messageBody);
@@ -79,7 +93,6 @@ async function updateParticipants() {
             if(currentTime - participant.lastStatus > 10000){
                 await db.collection("participants").deleteOne({name: participant.name});
                 await db.collection("messages").insertOne(messageBody);
-                console.log(`participante ${participant.name} removido`)
             }
         }
     } catch(error){
@@ -99,10 +112,17 @@ app.get("/participants", async (req, res) =>{
 });
 
 app.post("/messages", async (req, res) => {
-    const message = {...req.body, from: req.headers.user, time: dayjs().format("hh:mm:ss")}
+    const messageFrom = await db.collection("participants").findOne({name: req.headers.user});
+    const message = {...req.body, from: messageFrom.name, time: dayjs().format("hh:mm:ss")}
+
+    const validateMessage = messageSchema.validate(message);
+    if(validateMessage.error){
+        res.sendStatus(422);
+        return;
+    }
+
     try{
         await db.collection("messages").insertOne(message);
-         console.log(message);
         res.status(201).send("OK");
     } catch(error){
         res.status(400).send(error);
@@ -141,7 +161,6 @@ app.post("/status", async (req, res) => {
     const userName = req.headers.user;
     const participant = await db.collection("participants").findOne({name: userName});
     if(!participant) {
-        console.log("não atualizado, participante removido");
         return res.sendStatus(404);
     }
     const participantID = participant._id;    
@@ -157,7 +176,6 @@ app.post("/status", async (req, res) => {
                 }
             }
         );
-        console.log("status atualizado");
         res.sendStatus(200);
     } catch(error){
         res.send(400);
