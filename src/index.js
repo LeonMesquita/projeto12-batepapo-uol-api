@@ -4,6 +4,7 @@ dayjs().format()
 import express from 'express';
 import cors from 'cors';
 import {MongoClient, ObjectId} from 'mongodb';
+import joi from 'joi';
 
 
 console.log(dayjs().format("hh:mm:ss"));
@@ -21,6 +22,11 @@ app.use(express.json());
 app.use(cors());
 
 
+const participantSchema = joi.object({
+    name: joi.string().required()
+});
+
+
 
 app.post("/participants", async (req, res) => {
     const user = {...req.body, lastStatus: Date.now()};
@@ -32,7 +38,13 @@ app.post("/participants", async (req, res) => {
         time: dayjs().format("hh:mm:ss")
     };
     
-    if(!user.name || user.name==="") return res.status(422).send("O nome de usuário deve ser informado.");
+    const validateParticipant = participantSchema.validate(req.body);
+    if(validateParticipant.error){
+        console.log(user.name)
+        res.status(422).send("O nome de usuário deve ser informado.");
+        return;
+    }
+    
     const participants = await db.collection("participants").find().toArray();
     if(participants.find((participant) => participant.name == user.name)) return res.status(409).send("Este nome de usuário já existe.");
    //updateParticipants();
@@ -61,14 +73,13 @@ async function updateParticipants() {
                 from: participant.name,
                 to: 'Todos',
                 text: 'sai da sala...',
-                type: 'message',
+                type: 'status',
                 time: dayjs().format("hh:mm:ss")
             };
             if(currentTime - participant.lastStatus > 10000){
                 await db.collection("participants").deleteOne({name: participant.name});
                 await db.collection("messages").insertOne(messageBody);
                 console.log(`participante ${participant.name} removido`)
-                
             }
         }
     } catch(error){
