@@ -6,34 +6,6 @@ import cors from 'cors';
 import {MongoClient, ObjectId} from 'mongodb';
 import joi from 'joi';
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-console.log(dayjs().format("hh:mm:ss"));
-
 const client = new MongoClient("mongodb://127.0.0.1:27017");
 
 let db;
@@ -50,12 +22,6 @@ app.use(cors());
 const participantSchema = joi.object({
     name: joi.string().required()
 });
-
-/*
-    email: Joi.string()
-        .email({ minDomainSegments: 2, tlds: { allow: ['com', 'net'] } })
-*/
-
 
 const messageSchema = joi.object(
     {
@@ -139,7 +105,6 @@ app.get("/participants", async (req, res) =>{
 app.post("/messages", async (req, res) => {
     const messageFrom = await db.collection("participants").findOne({name: req.headers.user});
     const message = {...req.body, from: messageFrom.name, time: dayjs().format("hh:mm:ss")}
-
     const validateMessage = messageSchema.validate(message);
     if(validateMessage.error){
         res.sendStatus(422);
