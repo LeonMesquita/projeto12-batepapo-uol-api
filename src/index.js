@@ -225,7 +225,7 @@ app.put("/messages/:message_id", async (req, res) => {
         await db.collection('messages').updateOne(
             {_id: message._id},
             {
-                $set: { messageBody }
+                $set: messageBody
             }
             );
         res.status(200).send("OK");
