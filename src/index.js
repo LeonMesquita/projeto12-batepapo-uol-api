@@ -7,6 +7,31 @@ import {MongoClient, ObjectId} from 'mongodb';
 import joi from 'joi';
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 console.log(dayjs().format("hh:mm:ss"));
 
 const client = new MongoClient("mongodb://127.0.0.1:27017");
@@ -132,29 +157,17 @@ app.post("/messages", async (req, res) => {
 
 app.get("/messages", async (req, res) => {
     const limit = parseInt(req.query["limit"]);
-    let contMessages = 0;
-    const newMessagesList = [];
     const user = req.headers.user;
     try{
         const messagesList = await db.collection("messages").find().toArray();
-        //const messagesList = await db.collection("messages").find({to: user}).toArray();
-        if(!limit) res.send(messagesList);
-        for(let count = messagesList.length-1; count >= 0; count--){
-            const message = messagesList[count];
-            if(message.type === "message" || message.type === "status" || message.from === user || message.to === user){
-                newMessagesList.unshift(message);
-                contMessages++;
-            }
-            if(contMessages === limit)
-                break;
-        }
-        res.send(newMessagesList);
-
-
+        const filterMessages = messagesList.filter((message) => 
+            message.type === "message" || message.type === "status" || message.from === user || message.to === user);
+        if(!limit) res.send(filterMessages);
+        res.send(filterMessages.slice(-limit));
     } catch(error){
+        res.sendStatus(400);
 
     }
-
 });
 
 app.post("/status", async (req, res) => {
